@@ -1,0 +1,2496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Habitat Builder</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dat.gui@0.7.7/build/dat.gui.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #000;
+            color: #ffffff;
+            overflow: hidden;
+        }
+
+        /* Splash Screen */
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+
+        #splash-screen h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            background: linear-gradient(90deg, #ff8a00 0%, #ff5e7d 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(255, 94, 125, 0.5);
+        }
+
+        #splash-screen p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            color: #a0a0a0;
+            text-align: center;
+            max-width: 600px;
+        }
+
+        #moon-container {
+            width: 300px;
+            height: 300px;
+            margin-bottom: 2rem;
+        }
+
+        .loading-bar {
+            width: 300px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .loading-progress {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ff8a00 0%, #ff5e7d 100%);
+            transition: width 2s ease;
+        }
+
+        /* Main App */
+        #app {
+            display: none;
+            width: 100%;
+            height: 100vh;
+        }
+
+        .app-header {
+            background: rgba(20, 20, 20, 0.95);
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+
+        .app-header h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(90deg, #ff8a00 0%, #ff5e7d 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .app-container {
+            display: flex;
+            height: calc(100vh - 70px);
+        }
+
+        /* Left Sidebar - Shape Palette */
+        .shape-palette {
+            width: 280px;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 1rem;
+            overflow-y: auto;
+            border-right: 1px solid #333;
+        }
+
+        .palette-category {
+            margin-bottom: 1.5rem;
+        }
+
+        .palette-category h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.8rem;
+            color: #ff8a00;
+            border-bottom: 1px solid #333;
+            padding-bottom: 0.5rem;
+        }
+
+        .shape-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .shape-item {
+            background: rgba(40, 40, 40, 0.8);
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 0.8rem;
+            text-align: center;
+            cursor: grab;
+            transition: all 0.3s ease;
+        }
+
+        .shape-item:hover {
+            transform: translateY(-3px);
+            border-color: #ff8a00;
+            box-shadow: 0 5px 15px rgba(255, 138, 0, 0.3);
+        }
+
+        .shape-icon {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 0.5rem;
+            background: rgba(255, 138, 0, 0.2);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .shape-name {
+            font-size: 0.8rem;
+            color: #e0e0e0;
+        }
+
+        /* Right Sidebar - Controls */
+        .control-panel {
+            width: 320px;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 1.5rem;
+            overflow-y: auto;
+            border-left: 1px solid #333;
+        }
+
+        .control-section {
+            margin-bottom: 2rem;
+        }
+
+        .control-section h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #ff8a00;
+            border-bottom: 1px solid #333;
+            padding-bottom: 0.5rem;
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #a0a0a0;
+            font-size: 0.9rem;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 0.6rem;
+            background: rgba(40, 40, 40, 0.8);
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: white;
+        }
+
+        .btn {
+            background: linear-gradient(90deg, #ff8a00 0%, #ff5e7d 100%);
+            color: white;
+            border: none;
+            padding: 0.7rem 1.2rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 138, 0, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(90deg, #ff5e7d 0%, #ff8a00 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(90deg, #00b09b 0%, #96c93d 100%);
+        }
+
+        /* Habitat Templates */
+        .template-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 1rem;
+        }
+
+        .template-item {
+            background: rgba(40, 40, 40, 0.8);
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .template-item:hover {
+            border-color: #ff8a00;
+            transform: translateY(-2px);
+        }
+
+        .template-name {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #ff8a00;
+        }
+
+        .template-desc {
+            font-size: 0.8rem;
+            color: #a0a0a0;
+        }
+
+        /* Validation Panel */
+        .validation-panel {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 4px;
+            background: rgba(40, 40, 40, 0.8);
+        }
+
+        .validation-status {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 0.8rem;
+            border-radius: 4px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        .status-invalid {
+            background: rgba(255, 94, 125, 0.1);
+            border: 1px solid rgba(255, 94, 125, 0.3);
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .status-valid {
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+        }
+
+        .status-invalid-indicator {
+            background: #ff5e7d;
+            box-shadow: 0 0 10px #ff5e7d;
+        }
+
+        .compliance-meter {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .compliance-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff5e7d 0%, #ff8a00 50%, #00ff88 100%);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .issues-list {
+            list-style: none;
+        }
+
+        .issue-item {
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 94, 125, 0.2);
+            border-radius: 4px;
+            border-left: 3px solid #ff5e7d;
+            font-size: 0.9rem;
+        }
+
+        /* Canvas Container */
+        .canvas-container {
+            flex-grow: 1;
+            position: relative;
+            background: #000;
+        }
+
+        #design-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        #design-canvas-2d {
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+
+        .canvas-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .canvas-controls button {
+            background: rgba(40, 40, 40, 0.8);
+            color: white;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .canvas-controls button:hover {
+            background: rgba(255, 138, 0, 0.2);
+            border-color: #ff8a00;
+        }
+
+        .canvas-controls button.active {
+            background: rgba(255, 138, 0, 0.4);
+            border-color: #ff8a00;
+        }
+
+        .environment-selector {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .env-btn {
+            background: rgba(40, 40, 40, 0.8);
+            color: white;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .env-btn.active {
+            background: rgba(255, 138, 0, 0.4);
+            border-color: #ff8a00;
+        }
+
+        .volume-display {
+            position: absolute;
+            top: 70px;
+            right: 20px;
+            background: rgba(40, 40, 40, 0.8);
+            padding: 1rem;
+            border-radius: 4px;
+            border: 1px solid #333;
+        }
+
+        .volume-display h4 {
+            margin-bottom: 0.5rem;
+            color: #ff8a00;
+        }
+
+        .volume-bar {
+            width: 200px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .volume-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff8a00 0%, #ff5e7d 100%);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        /* Transform Controls - TOGGLEABLE */
+        .transform-controls {
+            position: absolute;
+            bottom: 70px;
+            left: 20px;
+            background: rgba(40, 40, 40, 0.95);
+            padding: 1rem;
+            border-radius: 4px;
+            border: 1px solid #ff8a00;
+            min-width: 250px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            display: none; /* Hidden by default */
+            z-index: 50;
+        }
+
+        .transform-controls.visible {
+            display: block;
+        }
+
+        .transform-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .transform-controls h4 {
+            margin-bottom: 0;
+            color: #ff8a00;
+        }
+
+        .toggle-transform {
+            background: rgba(255, 138, 0, 0.2);
+            color: white;
+            border: 1px solid #ff8a00;
+            border-radius: 4px;
+            padding: 0.3rem 0.6rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-transform:hover {
+            background: rgba(255, 138, 0, 0.4);
+        }
+
+        .transform-sliders {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider-group label {
+            width: 70px;
+            font-size: 0.8rem;
+            color: #a0a0a0;
+        }
+
+        .slider-group input {
+            flex: 1;
+        }
+
+        .slider-value {
+            width: 40px;
+            font-size: 0.8rem;
+            color: #ff8a00;
+            text-align: right;
+        }
+
+        /* Selection Highlight */
+        .selection-highlight {
+            border: 2px solid #ff8a00;
+            background: rgba(255, 138, 0, 0.1);
+            border-radius: 4px;
+            pointer-events: none;
+            position: absolute;
+            z-index: 10;
+            display: none;
+        }
+
+        /* Simulation Overlay */
+        #simulation-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .simulation-panel {
+            background: rgba(20, 20, 20, 0.95);
+            padding: 2rem;
+            border-radius: 8px;
+            border: 1px solid #ff8a00;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .simulation-panel h2 {
+            margin-bottom: 1rem;
+            color: #ff8a00;
+        }
+
+        .simulation-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .stat-item {
+            background: rgba(40, 40, 40, 0.8);
+            padding: 1rem;
+            border-radius: 4px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ff5e7d;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #a0a0a0;
+        }
+
+        /* View Toggle */
+        .view-toggle {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .view-btn {
+            background: rgba(40, 40, 40, 0.8);
+            color: white;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .view-btn.active {
+            background: rgba(255, 138, 0, 0.4);
+            border-color: #ff8a00;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .shape-palette, .control-panel {
+                width: 250px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+            
+            .shape-palette, .control-panel {
+                width: 100%;
+                height: auto;
+                max-height: 200px;
+            }
+            
+            .canvas-container {
+                height: 60%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div id="splash-screen">
+        <h1> Habitat Builder</h1>
+        <p>Design Habitats for Moon and Mars missions</p>
+        <div id="moon-container"></div>
+        <div class="loading-bar">
+            <div class="loading-progress" id="loading-progress"></div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app">
+        <header class="app-header">
+            <h1> Habitat Builder</h1>
+            <div class="header-controls">
+                <button class="btn btn-success" id="simulate-btn">Simulate Habitat</button>
+                <button class="btn" id="export-btn">Export Design</button>
+            </div>
+        </header>
+        
+        <div class="app-container">
+            <!-- Left Sidebar - Shape Palette -->
+            <div class="shape-palette">
+                <div class="palette-category">
+                    <h3>Structural Modules</h3>
+                    <div class="shape-grid">
+                        <div class="shape-item" data-type="dome">
+                            <div class="shape-icon">⛺</div>
+                            <div class="shape-name">Dome Shell</div>
+                        </div>
+                        <div class="shape-item" data-type="airlock">
+                            <div class="shape-icon">🚪</div>
+                            <div class="shape-name">Airlock</div>
+                        </div>
+                        <div class="shape-item" data-type="connector">
+                            <div class="shape-icon">🔗</div>
+                            <div class="shape-name">Connector</div>
+                        </div>
+                        <div class="shape-item" data-type="corridor">
+                            <div class="shape-icon">➖</div>
+                            <div class="shape-name">Corridor</div>
+                        </div>
+                        <div class="shape-item" data-type="platform">
+                            <div class="shape-icon">⬛</div>
+                            <div class="shape-name">Platform</div>
+                        </div>
+                        <div class="shape-item" data-type="observation">
+                            <div class="shape-icon">🔭</div>
+                            <div class="shape-name">Observatory</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="palette-category">
+                    <h3>Living Quarters</h3>
+                    <div class="shape-grid">
+                        <div class="shape-item" data-type="sleepPod">
+                            <div class="shape-icon">🛏️</div>
+                            <div class="shape-name">Sleep Pod</div>
+                        </div>
+                        <div class="shape-item" data-type="locker">
+                            <div class="shape-icon">🗄️</div>
+                            <div class="shape-name">Locker</div>
+                        </div>
+                        <div class="shape-item" data-type="hygiene">
+                            <div class="shape-icon">🚿</div>
+                            <div class="shape-name">Hygiene</div>
+                        </div>
+                        <div class="shape-item" data-type="desk">
+                            <div class="shape-icon">🪑</div>
+                            <div class="shape-name">Desk</div>
+                        </div>
+                        <div class="shape-item" data-type="divider">
+                            <div class="shape-icon">🚧</div>
+                            <div class="shape-name">Divider</div>
+                        </div>
+                        <div class="shape-item" data-type="entertainment">
+                            <div class="shape-icon">🎮</div>
+                            <div class="shape-name">Entertainment</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="palette-category">
+                    <h3>Lab & Research</h3>
+                    <div class="shape-grid">
+                        <div class="shape-item" data-type="labStation">
+                            <div class="shape-icon">🔬</div>
+                            <div class="shape-name">Lab Station</div>
+                        </div>
+                        <div class="shape-item" data-type="microscope">
+                            <div class="shape-icon">🔍</div>
+                            <div class="shape-name">Microscope</div>
+                        </div>
+                        <div class="shape-item" data-type="chemicalStorage">
+                            <div class="shape-icon">🧪</div>
+                            <div class="shape-name">Chem Storage</div>
+                        </div>
+                        <div class="shape-item" data-type="shieldedChamber">
+                            <div class="shape-icon">☢️</div>
+                            <div class="shape-name">Shielded Chamber</div>
+                        </div>
+                        <div class="shape-item" data-type="dataTerminal">
+                            <div class="shape-icon">💻</div>
+                            <div class="shape-name">Data Terminal</div>
+                        </div>
+                        <div class="shape-item" data-type="greenhouse">
+                            <div class="shape-icon">🌱</div>
+                            <div class="shape-name">Greenhouse</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="palette-category">
+                    <h3>Utility Systems</h3>
+                    <div class="shape-grid">
+                        <div class="shape-item" data-type="oxygenGenerator">
+                            <div class="shape-icon">💨</div>
+                            <div class="shape-name">Oxygen Gen</div>
+                        </div>
+                        <div class="shape-item" data-type="waterRecycler">
+                            <div class="shape-icon">💧</div>
+                            <div class="shape-name">Water Recycler</div>
+                        </div>
+                        <div class="shape-item" data-type="battery">
+                            <div class="shape-icon">🔋</div>
+                            <div class="shape-name">Battery Bank</div>
+                        </div>
+                        <div class="shape-item" data-type="solarPanel">
+                            <div class="shape-icon">☀️</div>
+                            <div class="shape-name">Solar Panel</div>
+                        </div>
+                        <div class="shape-item" data-type="thermalReg">
+                            <div class="shape-icon">🌡️</div>
+                            <div class="shape-name">Thermal Reg</div>
+                        </div>
+                        <div class="shape-item" data-type="wasteMgmt">
+                            <div class="shape-icon">🗑️</div>
+                            <div class="shape-name">Waste Mgmt</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="palette-category">
+                    <h3>Premade Habitats</h3>
+                    <div class="template-grid">
+                        <div class="template-item" data-template="lunarBase">
+                            <div class="template-name">Lunar Science Base</div>
+                            <div class="template-desc">Complete research station with labs and living quarters</div>
+                        </div>
+                        <div class="template-item" data-template="marsColony">
+                            <div class="template-name">Mars Colony Starter</div>
+                            <div class="template-desc">Self-sufficient habitat for long-term Mars missions</div>
+                        </div>
+                        <div class="template-item" data-template="deepSpace">
+                            <div class="template-name">Deep Space Habitat</div>
+                            <div class="template-desc">Compact design for deep space exploration missions</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Canvas -->
+            <div class="canvas-container">
+                <div id="design-canvas"></div>
+                <canvas id="design-canvas-2d"></canvas>
+                
+                <div class="view-toggle">
+                    <button class="view-btn active" id="view-3d-btn">3D View</button>
+                    <button class="view-btn" id="view-2d-btn">2D View</button>
+                </div>
+                
+                <div class="environment-selector">
+                    <button class="env-btn active" id="moon-env">Moon</button>
+                    <button class="env-btn" id="mars-env">Mars</button>
+                </div>
+                
+                <div class="volume-display">
+                    <h4>Volume Usage</h4>
+                    <div id="volume-text">0 / 100 m³</div>
+                    <div class="volume-bar">
+                        <div class="volume-fill" id="volume-fill"></div>
+                    </div>
+                </div>
+
+                <!-- Transform Controls - TOGGLEABLE -->
+                <div class="transform-controls" id="transform-controls">
+                    <div class="transform-header">
+                        <h4>Transform Controls</h4>
+                        <button class="toggle-transform" id="toggle-transform">Hide</button>
+                    </div>
+                    <div class="transform-sliders">
+                        <div class="slider-group">
+                            <label>Position X:</label>
+                            <input type="range" id="pos-x" min="-20" max="20" step="0.1" value="0">
+                            <span class="slider-value" id="pos-x-value">0.0</span>
+                        </div>
+                        <div class="slider-group">
+                            <label>Position Y:</label>
+                            <input type="range" id="pos-y" min="0" max="20" step="0.1" value="1">
+                            <span class="slider-value" id="pos-y-value">1.0</span>
+                        </div>
+                        <div class="slider-group">
+                            <label>Position Z:</label>
+                            <input type="range" id="pos-z" min="-20" max="20" step="0.1" value="0">
+                            <span class="slider-value" id="pos-z-value">0.0</span>
+                        </div>
+                        <div class="slider-group">
+                            <label>Scale:</label>
+                            <input type="range" id="scale" min="0.1" max="5" step="0.1" value="1">
+                            <span class="slider-value" id="scale-value">1.0</span>
+                        </div>
+                        <div class="slider-group">
+                            <label>Rotation X:</label>
+                            <input type="range" id="rotation-x" min="0" max="360" step="1" value="0">
+                            <span class="slider-value" id="rotation-x-value">0°</span>
+                        </div>
+                        <div class="slider-group">
+                            <label>Rotation Y:</label>
+                            <input type="range" id="rotation-y" min="0" max="360" step="1" value="0">
+                            <span class="slider-value" id="rotation-y-value">0°</span>
+                        </div>
+                        <div class="slider-group">
+                            <label>Rotation Z:</label>
+                            <input type="range" id="rotation-z" min="0" max="360" step="1" value="0">
+                            <span class="slider-value" id="rotation-z-value">0°</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="canvas-controls">
+                    <button id="reset-view-btn">Reset View</button>
+                    <button id="toggle-grid-btn">Toggle Grid</button>
+                    <button id="snap-toggle-btn">Snap: ON</button>
+                    <button id="show-transform-btn">Show Controls</button>
+                </div>
+            </div>
+            
+            <!-- Right Sidebar - Controls -->
+            <div class="control-panel">
+                <div class="control-section">
+                    <h3>Mission Parameters</h3>
+                    <div class="input-group">
+                        <label for="habitat-volume">Total Habitat Volume (m³)</label>
+                        <input type="number" id="habitat-volume" value="150" min="10" step="10">
+                    </div>
+                    <div class="input-group">
+                        <label for="crew-size">Crew Size</label>
+                        <input type="number" id="crew-size" value="4" min="1" max="20">
+                    </div>
+                    <div class="input-group">
+                        <label for="mission-duration">Mission Duration (days)</label>
+                        <input type="number" id="mission-duration" value="180" min="1" step="10">
+                    </div>
+                    <div class="input-group">
+                        <label for="mission-type">Mission Type</label>
+                        <select id="mission-type">
+                            <option value="moon">Lunar Base</option>
+                            <option value="mars">Mars Colony</option>
+                            <option value="deepSpace">Deep Space</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="control-section">
+                    <h3>Design Validation</h3>
+                    <div class="validation-panel">
+                        <div class="validation-status" id="validation-status">
+                            <div class="status-indicator status-valid" id="status-indicator"></div>
+                            <span id="validation-text">Design is valid</span>
+                        </div>
+                        
+                        <div class="compliance-meter">
+                            <div class="compliance-fill" id="compliance-fill"></div>
+                        </div>
+                        <div style="text-align: center; font-size: 0.9rem; margin-bottom: 1rem;">
+                            NASA Compliance: <span id="compliance-percent">0%</span>
+                        </div>
+                        
+                        <ul class="issues-list" id="issues-list">
+                            <!-- Issues will be added here dynamically -->
+                        </ul>
+                    </div>
+                    <button class="btn" id="validate-btn">Validate Design</button>
+                </div>
+                
+                <div class="control-section">
+                    <h3>Interaction Modes</h3>
+                    <div class="input-group">
+                        <label>
+                            <input type="radio" name="interaction-mode" value="camera" checked> Camera Control
+                        </label>
+                    </div>
+                    <div class="input-group">
+                        <label>
+                            <input type="radio" name="interaction-mode" value="object"> Object Manipulation
+                        </label>
+                    </div>
+                    <div class="input-group">
+                        <label>
+                            <input type="checkbox" id="auto-rotate" checked> Auto-Rotate Base
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="control-section">
+                    <h3>Design Tools</h3>
+                    <button class="btn" id="clear-btn">Clear All</button>
+                    <button class="btn" id="save-design-btn">Save Design</button>
+                    <button class="btn" id="load-design-btn">Load Design</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Simulation Overlay -->
+        <div id="simulation-overlay">
+            <div class="simulation-panel">
+                <h2>Habitat Simulation Running</h2>
+                <p>Analyzing your habitat design for NASA compliance and operational efficiency</p>
+                
+                <div class="simulation-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="sim-oxygen">98%</div>
+                        <div class="stat-label">Oxygen Level</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="sim-power">87%</div>
+                        <div class="stat-label">Power Efficiency</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="sim-water">92%</div>
+                        <div class="stat-label">Water Recycling</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="sim-waste">76%</div>
+                        <div class="stat-label">Waste Processing</div>
+                    </div>
+                </div>
+                
+                <div id="simulation-results">
+                    <!-- Results will be displayed here -->
+                </div>
+                
+                <button class="btn" id="stop-simulation-btn">Stop Simulation</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let scene, camera, renderer, moon;
+        let objects = [];
+        let selectedObject = null;
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+        let gridHelper;
+        let stars;
+        let currentEnvironment = 'moon';
+        let snapToGrid = true;
+        let isSimulationMode = false;
+        let canvas2d, ctx2d;
+        let autoRotate = true;
+        let interactionMode = 'camera'; // 'camera' or 'object'
+        let transformControlsVisible = false;
+        
+        // Habitat data
+        let habitatData = {
+            volume: 150,
+            crewSize: 4,
+            missionDuration: 180,
+            missionType: 'moon',
+            shapes: []
+        };
+
+        // Shape definitions with properties
+        const shapeDefinitions = {
+            dome: { 
+                name: 'Dome Shell', 
+                geometry: 'dome', 
+                color: 0xff8a00, 
+                volume: 50,
+                category: 'structural'
+            },
+            airlock: { 
+                name: 'Airlock', 
+                geometry: 'airlock', 
+                color: 0xff5e7d, 
+                volume: 10,
+                category: 'structural'
+            },
+            connector: { 
+                name: 'Connector Shaft', 
+                geometry: 'connector', 
+                color: 0xff8a00, 
+                volume: 15,
+                category: 'structural'
+            },
+            corridor: { 
+                name: 'Expandable Corridor', 
+                geometry: 'corridor', 
+                color: 0xff5e7d, 
+                volume: 20,
+                category: 'structural'
+            },
+            platform: { 
+                name: 'Multi-level Platform', 
+                geometry: 'platform', 
+                color: 0xff8a00, 
+                volume: 25,
+                category: 'structural'
+            },
+            observation: { 
+                name: 'Observation Deck', 
+                geometry: 'observation', 
+                color: 0xff5e7d, 
+                volume: 30,
+                category: 'structural'
+            },
+            sleepPod: { 
+                name: 'Sleeping Pod', 
+                geometry: 'sleepPod', 
+                color: 0x96c93d, 
+                volume: 8,
+                category: 'living'
+            },
+            locker: { 
+                name: 'Locker Unit', 
+                geometry: 'locker', 
+                color: 0xff8a00, 
+                volume: 2,
+                category: 'living'
+            },
+            hygiene: { 
+                name: 'Hygiene Module', 
+                geometry: 'hygiene', 
+                color: 0xff5e7d, 
+                volume: 6,
+                category: 'living'
+            },
+            desk: { 
+                name: 'Desk & Chair', 
+                geometry: 'desk', 
+                color: 0xff8a00, 
+                volume: 4,
+                category: 'living'
+            },
+            divider: { 
+                name: 'Privacy Divider', 
+                geometry: 'divider', 
+                color: 0xa0a0a0, 
+                volume: 3,
+                category: 'living'
+            },
+            entertainment: { 
+                name: 'Entertainment Console', 
+                geometry: 'entertainment', 
+                color: 0xff8a00, 
+                volume: 5,
+                category: 'living'
+            },
+            labStation: { 
+                name: 'Lab Station', 
+                geometry: 'labStation', 
+                color: 0xff5e7d, 
+                volume: 12,
+                category: 'research'
+            },
+            microscope: { 
+                name: 'Microscope Table', 
+                geometry: 'microscope', 
+                color: 0xff8a00, 
+                volume: 4,
+                category: 'research'
+            },
+            chemicalStorage: { 
+                name: 'Chemical Storage', 
+                geometry: 'chemicalStorage', 
+                color: 0xff5e7d, 
+                volume: 6,
+                category: 'research'
+            },
+            shieldedChamber: { 
+                name: 'Shielded Chamber', 
+                geometry: 'shieldedChamber', 
+                color: 0xff5e7d, 
+                volume: 15,
+                category: 'research'
+            },
+            dataTerminal: { 
+                name: 'Data Terminal', 
+                geometry: 'dataTerminal', 
+                color: 0x96c93d, 
+                volume: 5,
+                category: 'research'
+            },
+            greenhouse: { 
+                name: 'Greenhouse Pod', 
+                geometry: 'greenhouse', 
+                color: 0x00b09b, 
+                volume: 25,
+                category: 'research'
+            },
+            oxygenGenerator: { 
+                name: 'Oxygen Generator', 
+                geometry: 'oxygenGenerator', 
+                color: 0xff5e7d, 
+                volume: 8,
+                category: 'utility'
+            },
+            waterRecycler: { 
+                name: 'Water Recycler', 
+                geometry: 'waterRecycler', 
+                color: 0xff8a00, 
+                volume: 10,
+                category: 'utility'
+            },
+            battery: { 
+                name: 'Battery Bank', 
+                geometry: 'battery', 
+                color: 0xff8a00, 
+                volume: 6,
+                category: 'utility'
+            },
+            solarPanel: { 
+                name: 'Solar Panel', 
+                geometry: 'solarPanel', 
+                color: 0xff8a00, 
+                volume: 4,
+                category: 'utility'
+            },
+            thermalReg: { 
+                name: 'Thermal Regulator', 
+                geometry: 'thermalReg', 
+                color: 0xff5e7d, 
+                volume: 5,
+                category: 'utility'
+            },
+            wasteMgmt: { 
+                name: 'Waste Management', 
+                geometry: 'wasteMgmt', 
+                color: 0x00b09b, 
+                volume: 8,
+                category: 'utility'
+            }
+        };
+
+        // Initialize the application
+        function init() {
+            // Set up splash screen animation
+            document.getElementById('loading-progress').style.width = '100%';
+            
+            // Create rotating moon for splash screen
+            createMoon();
+            
+            // After 2 seconds, transition to main app
+            setTimeout(() => {
+                document.getElementById('splash-screen').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('splash-screen').style.display = 'none';
+                    document.getElementById('app').style.display = 'block';
+                    initDesignCanvas();
+                    init2DCanvas();
+                    setupEventListeners();
+                    updateVolumeDisplay();
+                    validateDesign();
+                    updateTransformControls();
+                }, 500);
+            }, 2000);
+        }
+
+        // Create rotating moon for splash screen
+        function createMoon() {
+            const container = document.getElementById('moon-container');
+            
+            // Set up scene
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(300, 300);
+            container.appendChild(renderer.domElement);
+            
+            // Create moon geometry and material
+            const geometry = new THREE.SphereGeometry(2, 32, 32);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0xaaaaaa,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            const moon = new THREE.Mesh(geometry, material);
+            scene.add(moon);
+            
+            // Add lighting
+            const ambientLight = new THREE.AmbientLight(0x333333);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 3, 5);
+            scene.add(directionalLight);
+            
+            // Position camera
+            camera.position.z = 5;
+            
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+                moon.rotation.y += 0.005;
+                renderer.render(scene, camera);
+            }
+            
+            animate();
+        }
+
+        // Initialize the design canvas
+        function initDesignCanvas() {
+            const canvasContainer = document.getElementById('design-canvas');
+            
+            // Set up scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+            
+            // Add starfield
+            createStarfield();
+            
+            // Set up camera
+            camera = new THREE.PerspectiveCamera(75, canvasContainer.clientWidth / canvasContainer.clientHeight, 0.1, 1000);
+            camera.position.set(15, 10, 15);
+            camera.lookAt(0, 0, 0);
+            
+            // Set up renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+            renderer.shadowMap.enabled = true;
+            canvasContainer.appendChild(renderer.domElement);
+            
+            // Add grid helper
+            gridHelper = new THREE.GridHelper(30, 30, 0x333333, 0x222222);
+            scene.add(gridHelper);
+            
+            // Add axes helper
+            const axesHelper = new THREE.AxesHelper(5);
+            scene.add(axesHelper);
+            
+            // Add lighting
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 10);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            // Start animation loop
+            animate();
+            
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        // Initialize 2D canvas
+        function init2DCanvas() {
+            canvas2d = document.getElementById('design-canvas-2d');
+            ctx2d = canvas2d.getContext('2d');
+            
+            // Set canvas size
+            const container = document.querySelector('.canvas-container');
+            canvas2d.width = container.clientWidth;
+            canvas2d.height = container.clientHeight;
+            
+            // Handle window resize for 2D canvas
+            window.addEventListener('resize', () => {
+                canvas2d.width = container.clientWidth;
+                canvas2d.height = container.clientHeight;
+                render2DView();
+            });
+        }
+
+        // Render 2D view
+        function render2DView() {
+            if (!ctx2d) return;
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            
+            // Clear canvas
+            ctx2d.fillStyle = '#000000';
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw grid
+            ctx2d.strokeStyle = '#333333';
+            ctx2d.lineWidth = 1;
+            
+            const gridSize = 20;
+            for (let x = 0; x <= width; x += gridSize) {
+                ctx2d.beginPath();
+                ctx2d.moveTo(x, 0);
+                ctx2d.lineTo(x, height);
+                ctx2d.stroke();
+            }
+            
+            for (let y = 0; y <= height; y += gridSize) {
+                ctx2d.beginPath();
+                ctx2d.moveTo(0, y);
+                ctx2d.lineTo(width, y);
+                ctx2d.stroke();
+            }
+            
+            // Draw objects
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const scale = 15;
+            
+            objects.forEach(obj => {
+                const posX = centerX + obj.position.x * scale;
+                const posY = centerY + obj.position.z * scale;
+                const size = obj.userData.volume / 5;
+                
+                // Get color from shape definition
+                const color = shapeDefinitions[obj.userData.type].color;
+                const hexColor = '#' + color.toString(16).padStart(6, '0');
+                
+                ctx2d.fillStyle = hexColor + '80'; // Add transparency
+                ctx2d.strokeStyle = hexColor;
+                ctx2d.lineWidth = 2;
+                
+                // Draw shape based on type
+                if (obj.userData.type.includes('dome') || obj.userData.type.includes('sphere')) {
+                    ctx2d.beginPath();
+                    ctx2d.arc(posX, posY, size, 0, Math.PI * 2);
+                    ctx2d.fill();
+                    ctx2d.stroke();
+                } else if (obj.userData.type.includes('cylinder') || obj.userData.type.includes('connector')) {
+                    ctx2d.beginPath();
+                    ctx2d.ellipse(posX, posY, size, size / 2, 0, 0, Math.PI * 2);
+                    ctx2d.fill();
+                    ctx2d.stroke();
+                } else {
+                    // Default rectangle
+                    ctx2d.fillRect(posX - size, posY - size, size * 2, size * 2);
+                    ctx2d.strokeRect(posX - size, posY - size, size * 2, size * 2);
+                }
+                
+                // Draw label
+                ctx2d.fillStyle = '#ffffff';
+                ctx2d.font = '10px Arial';
+                ctx2d.textAlign = 'center';
+                ctx2d.fillText(obj.userData.name, posX, posY + size + 15);
+            });
+        }
+
+        // Create starfield background
+        function createStarfield() {
+            const starGeometry = new THREE.BufferGeometry();
+            const starMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.1,
+            });
+            
+            const starVertices = [];
+            for (let i = 0; i < 10000; i++) {
+                const x = (Math.random() - 0.5) * 2000;
+                const y = (Math.random() - 0.5) * 2000;
+                const z = (Math.random() - 0.5) * 2000;
+                starVertices.push(x, y, z);
+            }
+            
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            stars = new THREE.Points(starGeometry, starMaterial);
+            scene.add(stars);
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Auto-rotate base if enabled
+            if (autoRotate && !selectedObject) {
+                scene.rotation.y += 0.005;
+            }
+            
+            // Rotate starfield slowly
+            if (stars) {
+                stars.rotation.y += 0.0001;
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        // Handle window resize
+        function onWindowResize() {
+            const canvasContainer = document.getElementById('design-canvas');
+            camera.aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Shape palette items
+            document.querySelectorAll('.shape-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const type = item.getAttribute('data-type');
+                    addShape(type);
+                });
+            });
+
+            // Template items
+            document.querySelectorAll('.template-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const template = item.getAttribute('data-template');
+                    loadTemplate(template);
+                });
+            });
+            
+            // Validate design button
+            document.getElementById('validate-btn').addEventListener('click', function() {
+                validateDesign();
+                // Show visual feedback
+                this.style.background = 'linear-gradient(90deg, #00b09b 0%, #96c93d 100%)';
+                setTimeout(() => {
+                    this.style.background = 'linear-gradient(90deg, #ff8a00 0%, #ff5e7d 100%)';
+                }, 1000);
+            });
+            
+            // Export design button
+            document.getElementById('export-btn').addEventListener('click', exportDesign);
+            
+            // Simulate habitat button
+            document.getElementById('simulate-btn').addEventListener('click', function() {
+                if (objects.length === 0) {
+                    alert('Please add some shapes first!');
+                    return;
+                }
+                startSimulation();
+            });
+            
+            // Stop simulation button
+            document.getElementById('stop-simulation-btn').addEventListener('click', stopSimulation);
+            
+            // Reset view button
+            document.getElementById('reset-view-btn').addEventListener('click', resetView);
+            
+            // Toggle grid button
+            document.getElementById('toggle-grid-btn').addEventListener('click', toggleGrid);
+            
+            // Toggle snap button
+            document.getElementById('snap-toggle-btn').addEventListener('click', toggleSnap);
+            
+            // Show transform controls button
+            document.getElementById('show-transform-btn').addEventListener('click', toggleTransformControls);
+            
+            // Toggle transform controls button
+            document.getElementById('toggle-transform').addEventListener('click', toggleTransformControls);
+            
+            // Clear all button
+            document.getElementById('clear-btn').addEventListener('click', clearAll);
+            
+            // Environment buttons
+            document.getElementById('moon-env').addEventListener('click', () => switchEnvironment('moon'));
+            document.getElementById('mars-env').addEventListener('click', () => switchEnvironment('mars'));
+            
+            // View toggle buttons
+            document.getElementById('view-3d-btn').addEventListener('click', () => switchView('3d'));
+            document.getElementById('view-2d-btn').addEventListener('click', () => switchView('2d'));
+            
+            // Interaction mode radio buttons
+            document.querySelectorAll('input[name="interaction-mode"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    interactionMode = e.target.value;
+                    updateInteractionMode();
+                });
+            });
+            
+            // Auto-rotate checkbox
+            document.getElementById('auto-rotate').addEventListener('change', (e) => {
+                autoRotate = e.target.checked;
+            });
+            
+            // Transform controls - real-time updates
+            document.getElementById('pos-x').addEventListener('input', updateTransform);
+            document.getElementById('pos-y').addEventListener('input', updateTransform);
+            document.getElementById('pos-z').addEventListener('input', updateTransform);
+            document.getElementById('scale').addEventListener('input', updateTransform);
+            document.getElementById('rotation-x').addEventListener('input', updateTransform);
+            document.getElementById('rotation-y').addEventListener('input', updateTransform);
+            document.getElementById('rotation-z').addEventListener('input', updateTransform);
+            
+            // Update habitat parameters
+            document.getElementById('habitat-volume').addEventListener('change', updateHabitatData);
+            document.getElementById('crew-size').addEventListener('change', updateHabitatData);
+            document.getElementById('mission-duration').addEventListener('change', updateHabitatData);
+            document.getElementById('mission-type').addEventListener('change', updateHabitatData);
+            
+            // Enhanced mouse events for both camera and object manipulation
+            setupEnhancedControls();
+        }
+
+        // Toggle transform controls visibility
+        function toggleTransformControls() {
+            const transformControls = document.getElementById('transform-controls');
+            const toggleButton = document.getElementById('toggle-transform');
+            const showButton = document.getElementById('show-transform-btn');
+            
+            transformControlsVisible = !transformControlsVisible;
+            
+            if (transformControlsVisible) {
+                transformControls.classList.add('visible');
+                toggleButton.textContent = 'Hide';
+                showButton.textContent = 'Hide Controls';
+            } else {
+                transformControls.classList.remove('visible');
+                toggleButton.textContent = 'Show';
+                showButton.textContent = 'Show Controls';
+            }
+        }
+
+        // Set up enhanced controls for camera and object manipulation
+        function setupEnhancedControls() {
+            let isMouseDown = false;
+            let previousMousePosition = { x: 0, y: 0 };
+            let isRotatingObject = false;
+            
+            renderer.domElement.addEventListener('mousedown', (event) => {
+                isMouseDown = true;
+                previousMousePosition = { x: event.clientX, y: event.clientY };
+                
+                const rect = renderer.domElement.getBoundingClientRect();
+                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(objects);
+                
+                if (intersects.length > 0) {
+                    // Select the object that was clicked
+                    selectObject(intersects[0].object);
+                    
+                    if (interactionMode === 'object') {
+                        isRotatingObject = true;
+                    }
+                } else {
+                    // Clicked empty space - deselect
+                    clearSelection();
+                }
+            });
+            
+            window.addEventListener('mouseup', () => {
+                isMouseDown = false;
+                isRotatingObject = false;
+            });
+            
+            window.addEventListener('mousemove', (event) => {
+                if (!isMouseDown) return;
+                
+                const deltaX = event.clientX - previousMousePosition.x;
+                const deltaY = event.clientY - previousMousePosition.y;
+                
+                if (interactionMode === 'camera') {
+                    // Camera controls
+                    camera.position.x -= deltaX * 0.01;
+                    camera.position.y += deltaY * 0.01;
+                    camera.lookAt(0, 0, 0);
+                } else if (interactionMode === 'object' && selectedObject) {
+                    if (isRotatingObject) {
+                        // Rotate object based on mouse movement
+                        selectedObject.rotation.x += deltaY * 0.01;
+                        selectedObject.rotation.y += deltaX * 0.01;
+                        updateTransformControls();
+                    } else {
+                        // Move object based on mouse movement
+                        selectedObject.position.x += deltaX * 0.01;
+                        selectedObject.position.y -= deltaY * 0.01;
+                        
+                        if (snapToGrid) {
+                            selectedObject.position.x = Math.round(selectedObject.position.x);
+                            selectedObject.position.y = Math.round(selectedObject.position.y);
+                            selectedObject.position.z = Math.round(selectedObject.position.z);
+                        }
+                        
+                        updateTransformControls();
+                    }
+                    
+                    updateHabitatDataForObject(selectedObject);
+                    validateDesign();
+                }
+                
+                previousMousePosition = { x: event.clientX, y: event.clientY };
+            });
+            
+            // Enhanced zoom controls for object scaling
+            renderer.domElement.addEventListener('wheel', (event) => {
+                event.preventDefault();
+                
+                if (interactionMode === 'camera') {
+                    // Camera zoom
+                    camera.position.z += event.deltaY * 0.01;
+                    camera.lookAt(0, 0, 0);
+                } else if (interactionMode === 'object' && selectedObject) {
+                    // Object scaling with wheel
+                    const scaleChange = event.deltaY * -0.001; // Invert for natural feeling
+                    const newScale = Math.max(0.1, selectedObject.userData.scale + scaleChange);
+                    
+                    selectedObject.scale.set(newScale, newScale, newScale);
+                    selectedObject.userData.scale = newScale;
+                    
+                    // Update volume based on scale
+                    const originalVolume = shapeDefinitions[selectedObject.userData.type].volume;
+                    selectedObject.userData.volume = originalVolume * newScale;
+                    
+                    updateTransformControls();
+                    updateVolumeDisplay();
+                    updateHabitatDataForObject(selectedObject);
+                    validateDesign();
+                }
+            });
+            
+            // Double click to toggle interaction mode
+            renderer.domElement.addEventListener('dblclick', (event) => {
+                const rect = renderer.domElement.getBoundingClientRect();
+                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(objects);
+                
+                if (intersects.length > 0) {
+                    selectObject(intersects[0].object);
+                    // Switch to object mode when double-clicking an object
+                    document.querySelector('input[value="object"]').checked = true;
+                    interactionMode = 'object';
+                    updateInteractionMode();
+                }
+            });
+        }
+
+        // Select an object
+        function selectObject(object) {
+            // Clear previous selection
+            clearSelection();
+            
+            // Set new selection
+            selectedObject = object;
+            
+            // Show transform controls
+            if (!transformControlsVisible) {
+                toggleTransformControls();
+            }
+            
+            // Update transform controls
+            updateTransformControls();
+            
+            // Highlight selected object
+            selectedObject.traverse((child) => {
+                if (child.isMesh) {
+                    child.material.emissive.setHex(0x333333);
+                }
+            });
+        }
+
+        // Update interaction mode display
+        function updateInteractionMode() {
+            const cameraMode = document.querySelector('input[value="camera"]');
+            const objectMode = document.querySelector('input[value="object"]');
+            
+            if (interactionMode === 'camera') {
+                cameraMode.parentElement.style.color = '#ff8a00';
+                objectMode.parentElement.style.color = '#a0a0a0';
+            } else {
+                cameraMode.parentElement.style.color = '#a0a0a0';
+                objectMode.parentElement.style.color = '#ff8a00';
+            }
+        }
+
+        // Switch between 2D and 3D views
+        function switchView(viewType) {
+            const canvas3d = document.getElementById('design-canvas');
+            const canvas2d = document.getElementById('design-canvas-2d');
+            const view3dBtn = document.getElementById('view-3d-btn');
+            const view2dBtn = document.getElementById('view-2d-btn');
+            
+            if (viewType === '3d') {
+                canvas3d.style.display = 'block';
+                canvas2d.style.display = 'none';
+                view3dBtn.classList.add('active');
+                view2dBtn.classList.remove('active');
+            } else {
+                canvas3d.style.display = 'none';
+                canvas2d.style.display = 'block';
+                view2dBtn.classList.add('active');
+                view3dBtn.classList.remove('active');
+                render2DView();
+            }
+        }
+
+        // Update habitat data from inputs
+        function updateHabitatData() {
+            habitatData.volume = parseFloat(document.getElementById('habitat-volume').value) || 150;
+            habitatData.crewSize = parseInt(document.getElementById('crew-size').value) || 4;
+            habitatData.missionDuration = parseInt(document.getElementById('mission-duration').value) || 180;
+            habitatData.missionType = document.getElementById('mission-type').value;
+            
+            updateVolumeDisplay();
+            validateDesign();
+        }
+
+        // Update habitat data for a specific object
+        function updateHabitatDataForObject(obj) {
+            const index = objects.indexOf(obj);
+            if (index !== -1) {
+                habitatData.shapes[index] = {
+                    ...obj.userData,
+                    position: { x: obj.position.x, y: obj.position.y, z: obj.position.z },
+                    rotation: { x: obj.rotation.x, y: obj.rotation.y, z: obj.rotation.z },
+                    scale: { x: obj.scale.x, y: obj.scale.y, z: obj.scale.z }
+                };
+            }
+        }
+
+        // Create realistic 3D geometry for different module types
+        function createModuleGeometry(type) {
+            switch(type) {
+                case 'dome':
+                    return new THREE.SphereGeometry(2, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+                case 'airlock':
+                    const airlockGroup = new THREE.Group();
+                    const cylinder = new THREE.CylinderGeometry(1, 1, 3, 16);
+                    const door = new THREE.BoxGeometry(1.5, 2, 0.2);
+                    const cylinderMesh = new THREE.Mesh(cylinder);
+                    const doorMesh = new THREE.Mesh(door);
+                    doorMesh.position.y = 0.5;
+                    airlockGroup.add(cylinderMesh);
+                    airlockGroup.add(doorMesh);
+                    return airlockGroup;
+                case 'connector':
+                    return new THREE.CylinderGeometry(0.8, 0.8, 4, 16);
+                case 'corridor':
+                    return new THREE.BoxGeometry(3, 2, 1);
+                case 'platform':
+                    return new THREE.BoxGeometry(4, 0.5, 4);
+                case 'observation':
+                    const obsGroup = new THREE.Group();
+                    const base = new THREE.CylinderGeometry(2, 2, 0.5, 16);
+                    const dome = new THREE.SphereGeometry(1.8, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+                    const baseMesh = new THREE.Mesh(base);
+                    const domeMesh = new THREE.Mesh(dome);
+                    domeMesh.position.y = 1;
+                    obsGroup.add(baseMesh);
+                    obsGroup.add(domeMesh);
+                    return obsGroup;
+                case 'sleepPod':
+                    const podGroup = new THREE.Group();
+                    const podBase = new THREE.CylinderGeometry(1, 1, 0.3, 16);
+                    const podTop = new THREE.SphereGeometry(1, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+                    const basePodMesh = new THREE.Mesh(podBase);
+                    const topPodMesh = new THREE.Mesh(podTop);
+                    topPodMesh.position.y = 0.5;
+                    podGroup.add(basePodMesh);
+                    podGroup.add(topPodMesh);
+                    return podGroup;
+                case 'locker':
+                    return new THREE.BoxGeometry(1, 2, 0.5);
+                case 'hygiene':
+                    const hygieneGroup = new THREE.Group();
+                    const baseH = new THREE.BoxGeometry(1.5, 0.2, 2);
+                    const shower = new THREE.CylinderGeometry(0.3, 0.3, 2, 16);
+                    const toilet = new THREE.BoxGeometry(0.6, 0.4, 0.6);
+                    const baseMeshH = new THREE.Mesh(baseH);
+                    const showerMesh = new THREE.Mesh(shower);
+                    const toiletMesh = new THREE.Mesh(toilet);
+                    showerMesh.position.set(-0.5, 1, 0);
+                    toiletMesh.position.set(0.5, 0.2, 0);
+                    hygieneGroup.add(baseMeshH);
+                    hygieneGroup.add(showerMesh);
+                    hygieneGroup.add(toiletMesh);
+                    return hygieneGroup;
+                case 'desk':
+                    const deskGroup = new THREE.Group();
+                    const deskTop = new THREE.BoxGeometry(1.5, 0.1, 0.8);
+                    const leg1 = new THREE.BoxGeometry(0.1, 0.8, 0.1);
+                    const leg2 = new THREE.BoxGeometry(0.1, 0.8, 0.1);
+                    const deskMesh = new THREE.Mesh(deskTop);
+                    const leg1Mesh = new THREE.Mesh(leg1);
+                    const leg2Mesh = new THREE.Mesh(leg2);
+                    leg1Mesh.position.set(-0.7, -0.45, 0.35);
+                    leg2Mesh.position.set(0.7, -0.45, 0.35);
+                    deskGroup.add(deskMesh);
+                    deskGroup.add(leg1Mesh);
+                    deskGroup.add(leg2Mesh);
+                    return deskGroup;
+                case 'divider':
+                    return new THREE.BoxGeometry(3, 2, 0.1);
+                case 'entertainment':
+                    return new THREE.BoxGeometry(1.2, 0.8, 0.4);
+                case 'labStation':
+                    const labGroup = new THREE.Group();
+                    const labBase = new THREE.BoxGeometry(2, 1, 1);
+                    const microscope = new THREE.CylinderGeometry(0.1, 0.1, 0.3, 16);
+                    const screen = new THREE.BoxGeometry(0.8, 0.5, 0.05);
+                    const labMesh = new THREE.Mesh(labBase);
+                    const microMesh = new THREE.Mesh(microscope);
+                    const screenMesh = new THREE.Mesh(screen);
+                    microMesh.position.set(0, 0.65, 0);
+                    screenMesh.position.set(0, 0.75, 0.5);
+                    labGroup.add(labMesh);
+                    labGroup.add(microMesh);
+                    labGroup.add(screenMesh);
+                    return labGroup;
+                case 'microscope':
+                    return new THREE.CylinderGeometry(0.2, 0.2, 0.5, 16);
+                case 'chemicalStorage':
+                    const chemGroup = new THREE.Group();
+                    const cabinet = new THREE.BoxGeometry(1, 1.5, 0.6);
+                    const bottles = new THREE.SphereGeometry(0.1, 8, 8);
+                    const cabinetMesh = new THREE.Mesh(cabinet);
+                    const bottle1 = new THREE.Mesh(bottles);
+                    const bottle2 = new THREE.Mesh(bottles);
+                    const bottle3 = new THREE.Mesh(bottles);
+                    bottle1.position.set(0.2, 0.2, 0.3);
+                    bottle2.position.set(-0.2, 0.2, 0.3);
+                    bottle3.position.set(0, 0.5, 0.3);
+                    chemGroup.add(cabinetMesh);
+                    chemGroup.add(bottle1);
+                    chemGroup.add(bottle2);
+                    chemGroup.add(bottle3);
+                    return chemGroup;
+                case 'shieldedChamber':
+                    return new THREE.CylinderGeometry(1.5, 1.5, 2.5, 16);
+                case 'dataTerminal':
+                    const terminalGroup = new THREE.Group();
+                    const terminalBase = new THREE.BoxGeometry(0.8, 0.1, 0.6);
+                    const terminalScreen = new THREE.BoxGeometry(0.7, 0.5, 0.05);
+                    const terminalBaseMesh = new THREE.Mesh(terminalBase);
+                    const terminalScreenMesh = new THREE.Mesh(terminalScreen);
+                    terminalScreenMesh.position.y = 0.3;
+                    terminalGroup.add(terminalBaseMesh);
+                    terminalGroup.add(terminalScreenMesh);
+                    return terminalGroup;
+                case 'greenhouse':
+                    const greenhouseGroup = new THREE.Group();
+                    const greenhouseBase = new THREE.BoxGeometry(3, 0.2, 2);
+                    const greenhouseGlass = new THREE.BoxGeometry(2.8, 1.5, 1.8);
+                    const baseGMesh = new THREE.Mesh(greenhouseBase);
+                    const glassMesh = new THREE.Mesh(greenhouseGlass);
+                    glassMesh.position.y = 0.85;
+                    greenhouseGroup.add(baseGMesh);
+                    greenhouseGroup.add(glassMesh);
+                    return greenhouseGroup;
+                case 'oxygenGenerator':
+                    const oxygenGroup = new THREE.Group();
+                    const oxygenBase = new THREE.CylinderGeometry(0.8, 0.8, 1, 16);
+                    const oxygenTank = new THREE.CylinderGeometry(0.5, 0.5, 1.5, 16);
+                    const baseOMesh = new THREE.Mesh(oxygenBase);
+                    const tankMesh = new THREE.Mesh(oxygenTank);
+                    tankMesh.position.y = 1.25;
+                    oxygenGroup.add(baseOMesh);
+                    oxygenGroup.add(tankMesh);
+                    return oxygenGroup;
+                case 'waterRecycler':
+                    const waterGroup = new THREE.Group();
+                    const waterBase = new THREE.BoxGeometry(1.2, 0.8, 0.8);
+                    const waterPipe = new THREE.CylinderGeometry(0.1, 0.1, 1, 16);
+                    const baseWMesh = new THREE.Mesh(waterBase);
+                    const pipeMesh = new THREE.Mesh(waterPipe);
+                    pipeMesh.position.set(0.5, 0.9, 0);
+                    waterGroup.add(baseWMesh);
+                    waterGroup.add(pipeMesh);
+                    return waterGroup;
+                case 'battery':
+                    return new THREE.BoxGeometry(1, 0.8, 0.6);
+                case 'solarPanel':
+                    const solarGroup = new THREE.Group();
+                    const panel = new THREE.BoxGeometry(2, 0.1, 1.5);
+                    const stand = new THREE.CylinderGeometry(0.1, 0.1, 1, 16);
+                    const panelMesh = new THREE.Mesh(panel);
+                    const standMesh = new THREE.Mesh(stand);
+                    panelMesh.rotation.x = Math.PI / 4;
+                    panelMesh.position.y = 0.5;
+                    solarGroup.add(panelMesh);
+                    solarGroup.add(standMesh);
+                    return solarGroup;
+                case 'thermalReg':
+                    return new THREE.CylinderGeometry(0.6, 0.6, 1.2, 16);
+                case 'wasteMgmt':
+                    const wasteGroup = new THREE.Group();
+                    const wasteBase = new THREE.CylinderGeometry(0.8, 0.8, 1, 16);
+                    const wasteLid = new THREE.CylinderGeometry(0.9, 0.9, 0.1, 16);
+                    const baseWasteMesh = new THREE.Mesh(wasteBase);
+                    const lidMesh = new THREE.Mesh(wasteLid);
+                    lidMesh.position.y = 0.55;
+                    wasteGroup.add(baseWasteMesh);
+                    wasteGroup.add(lidMesh);
+                    return wasteGroup;
+                default:
+                    return new THREE.BoxGeometry(1, 1, 1);
+            }
+        }
+
+        // Add a new shape to the scene
+        function addShape(type) {
+            const definition = shapeDefinitions[type];
+            if (!definition) return;
+            
+            // Create geometry based on type
+            let geometry = createModuleGeometry(type);
+            
+            // Create material with appropriate color
+            const material = new THREE.MeshStandardMaterial({ 
+                color: definition.color,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            // Create mesh or group
+            let mesh;
+            if (geometry.isGroup) {
+                // If it's a group, apply material to all children
+                mesh = geometry;
+                mesh.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material = material;
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+            } else {
+                // If it's a single geometry, create mesh
+                mesh = new THREE.Mesh(geometry, material);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+            }
+            
+            mesh.position.set(
+                (Math.random() * 10 - 5),
+                1,
+                (Math.random() * 10 - 5)
+            );
+            
+            // Store metadata
+            mesh.userData = {
+                type: type,
+                name: definition.name,
+                category: definition.category,
+                volume: definition.volume,
+                id: Date.now(),
+                scale: 1,
+                rotation: { x: 0, y: 0, z: 0 }
+            };
+            
+            // Add to scene and objects array
+            scene.add(mesh);
+            objects.push(mesh);
+            habitatData.shapes.push({
+                ...mesh.userData,
+                position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+                rotation: { x: mesh.rotation.x, y: mesh.rotation.y, z: mesh.rotation.z },
+                scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z }
+            });
+            
+            // Update UI
+            updateVolumeDisplay();
+            validateDesign();
+            render2DView();
+        }
+
+        // Load a premade habitat template
+        function loadTemplate(templateName) {
+            // Clear existing objects
+            clearAll();
+            
+            // Define templates
+            const templates = {
+                lunarBase: [
+                    { type: 'dome', position: { x: 0, y: 1, z: 0 }, scale: 1.5, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'labStation', position: { x: -3, y: 1, z: 2 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'sleepPod', position: { x: 3, y: 1, z: 2 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'oxygenGenerator', position: { x: -2, y: 1, z: -3 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'solarPanel', position: { x: 5, y: 1, z: 0 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'greenhouse', position: { x: 0, y: 1, z: 4 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } }
+                ],
+                marsColony: [
+                    { type: 'dome', position: { x: 0, y: 1, z: 0 }, scale: 2, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'connector', position: { x: 3, y: 1, z: 0 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'dome', position: { x: 6, y: 1, z: 0 }, scale: 1.5, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'sleepPod', position: { x: -2, y: 1, z: 2 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'sleepPod', position: { x: 2, y: 1, z: 2 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'labStation', position: { x: -2, y: 1, z: -2 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'greenhouse', position: { x: 2, y: 1, z: -2 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'oxygenGenerator', position: { x: -4, y: 1, z: 0 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'waterRecycler', position: { x: 4, y: 1, z: 0 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } }
+                ],
+                deepSpace: [
+                    { type: 'connector', position: { x: 0, y: 1, z: 0 }, scale: 1.2, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'sleepPod', position: { x: -2, y: 1, z: 0 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'sleepPod', position: { x: 2, y: 1, z: 0 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'labStation', position: { x: 0, y: 1, z: 2 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'oxygenGenerator', position: { x: 0, y: 1, z: -2 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'battery', position: { x: -2, y: 1, z: -2 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } },
+                    { type: 'solarPanel', position: { x: 2, y: 1, z: -2 }, scale: 1, rotation: { x: 0, y: 0, z: 0 } }
+                ]
+            };
+            
+            const template = templates[templateName];
+            if (!template) return;
+            
+            // Create objects from template
+            template.forEach(item => {
+                const definition = shapeDefinitions[item.type];
+                if (!definition) return;
+                
+                let geometry = createModuleGeometry(item.type);
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: definition.color,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                let mesh;
+                if (geometry.isGroup) {
+                    mesh = geometry;
+                    mesh.traverse((child) => {
+                        if (child.isMesh) {
+                            child.material = material;
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+                } else {
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+                }
+                
+                mesh.position.set(item.position.x, item.position.y, item.position.z);
+                mesh.scale.set(item.scale, item.scale, item.scale);
+                mesh.rotation.set(item.rotation.x, item.rotation.y, item.rotation.z);
+                
+                mesh.userData = {
+                    type: item.type,
+                    name: definition.name,
+                    category: definition.category,
+                    volume: definition.volume * item.scale,
+                    id: Date.now() + Math.random(),
+                    scale: item.scale,
+                    rotation: item.rotation
+                };
+                
+                scene.add(mesh);
+                objects.push(mesh);
+                habitatData.shapes.push({
+                    ...mesh.userData,
+                    position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+                    rotation: { x: mesh.rotation.x, y: mesh.rotation.y, z: mesh.rotation.z },
+                    scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z }
+                });
+            });
+            
+            updateVolumeDisplay();
+            validateDesign();
+            render2DView();
+        }
+
+        // Update volume display
+        function updateVolumeDisplay() {
+            const totalVolume = objects.reduce((sum, obj) => sum + obj.userData.volume, 0);
+            const habitatVolume = habitatData.volume;
+            const percentage = Math.min((totalVolume / habitatVolume) * 100, 100);
+            
+            document.getElementById('volume-text').textContent = `${totalVolume.toFixed(1)} / ${habitatVolume} m³`;
+            document.getElementById('volume-fill').style.width = `${percentage}%`;
+        }
+
+        // Validate design against NASA rules
+        function validateDesign() {
+            const issues = [];
+            const totalVolume = objects.reduce((sum, obj) => sum + obj.userData.volume, 0);
+            const habitatVolume = habitatData.volume;
+            const crewSize = habitatData.crewSize;
+            const missionDuration = habitatData.missionDuration;
+            
+            // Calculate compliance percentage
+            let complianceScore = 100;
+            
+            // Rule 1: Volume < crew × 10
+            if (habitatVolume < crewSize * 10) {
+                issues.push("Habitat volume too small for crew size");
+                complianceScore -= 20;
+            }
+            
+            // Rule 2: Duration > 180 days & volume < crew × 50
+            if (missionDuration > 180 && habitatVolume < crewSize * 50) {
+                issues.push("Not enough space for long mission duration");
+                complianceScore -= 15;
+            }
+            
+            // Calculate area volumes by category
+            const categoryVolumes = {
+                structural: 0,
+                living: 0,
+                research: 0,
+                utility: 0
+            };
+            
+            objects.forEach(obj => {
+                if (categoryVolumes.hasOwnProperty(obj.userData.category)) {
+                    categoryVolumes[obj.userData.category] += obj.userData.volume;
+                }
+            });
+            
+            // Rule 3: Living area < crew × 5
+            if (categoryVolumes.living < crewSize * 5) {
+                issues.push("Insufficient living space for crew");
+                complianceScore -= 15;
+            }
+            
+            // Rule 4: Utility area < crew × 3
+            if (categoryVolumes.utility < crewSize * 3) {
+                issues.push("Insufficient utility systems for crew needs");
+                complianceScore -= 10;
+            }
+            
+            // Rule 5: Total volume usage > 90%
+            if (totalVolume > habitatVolume * 0.9) {
+                issues.push("Habitat volume usage exceeds recommended limit (90%)");
+                complianceScore -= 10;
+            }
+            
+            // Rule 6: Must have at least one of each critical system
+            const hasOxygen = objects.some(obj => obj.userData.type === 'oxygenGenerator');
+            const hasWater = objects.some(obj => obj.userData.type === 'waterRecycler');
+            const hasPower = objects.some(obj => obj.userData.type === 'solarPanel' || obj.userData.type === 'battery');
+            
+            if (!hasOxygen) {
+                issues.push("Missing oxygen generation system");
+                complianceScore -= 10;
+            }
+            
+            if (!hasWater) {
+                issues.push("Missing water recycling system");
+                complianceScore -= 10;
+            }
+            
+            if (!hasPower) {
+                issues.push("Missing power generation/storage system");
+                complianceScore -= 10;
+            }
+            
+            // Ensure compliance score doesn't go below 0
+            complianceScore = Math.max(0, complianceScore);
+            
+            // Update validation UI
+            const validationStatus = document.getElementById('validation-status');
+            const statusIndicator = document.getElementById('status-indicator');
+            const validationText = document.getElementById('validation-text');
+            const issuesList = document.getElementById('issues-list');
+            const complianceFill = document.getElementById('compliance-fill');
+            const compliancePercent = document.getElementById('compliance-percent');
+            
+            complianceFill.style.width = `${complianceScore}%`;
+            compliancePercent.textContent = `${Math.round(complianceScore)}%`;
+            
+            if (issues.length === 0) {
+                validationStatus.className = 'validation-status';
+                statusIndicator.className = 'status-indicator status-valid';
+                validationText.textContent = 'Design is NASA compliant';
+                issuesList.innerHTML = '';
+            } else {
+                validationStatus.className = 'validation-status status-invalid';
+                statusIndicator.className = 'status-indicator status-invalid-indicator';
+                validationText.textContent = `Design has ${issues.length} compliance issue(s)`;
+                
+                issuesList.innerHTML = '';
+                issues.forEach(issue => {
+                    const li = document.createElement('li');
+                    li.className = 'issue-item';
+                    li.textContent = issue;
+                    issuesList.appendChild(li);
+                });
+            }
+            
+            // Update shape colors based on validation
+            updateShapeColors(complianceScore);
+            
+            return issues.length === 0;
+        }
+
+        // Update shape colors based on compliance score
+        function updateShapeColors(complianceScore) {
+            objects.forEach(obj => {
+                if (complianceScore >= 80) {
+                    // High compliance - use original colors
+                    const originalColor = shapeDefinitions[obj.userData.type].color;
+                    obj.traverse((child) => {
+                        if (child.isMesh) {
+                            child.material.color.setHex(originalColor);
+                        }
+                    });
+                } else if (complianceScore >= 60) {
+                    // Medium compliance - slightly desaturated
+                    const originalColor = new THREE.Color(shapeDefinitions[obj.userData.type].color);
+                    originalColor.multiplyScalar(0.7);
+                    obj.traverse((child) => {
+                        if (child.isMesh) {
+                            child.material.color.copy(originalColor);
+                        }
+                    });
+                } else {
+                    // Low compliance - red tint
+                    obj.traverse((child) => {
+                        if (child.isMesh) {
+                            child.material.color.setHex(0xff5e7d);
+                        }
+                    });
+                }
+            });
+        }
+
+        // Update transform controls
+        function updateTransformControls() {
+            if (selectedObject) {
+                // Update slider values
+                document.getElementById('pos-x').value = selectedObject.position.x;
+                document.getElementById('pos-y').value = selectedObject.position.y;
+                document.getElementById('pos-z').value = selectedObject.position.z;
+                document.getElementById('scale').value = selectedObject.userData.scale;
+                document.getElementById('rotation-x').value = selectedObject.rotation.x * (180 / Math.PI);
+                document.getElementById('rotation-y').value = selectedObject.rotation.y * (180 / Math.PI);
+                document.getElementById('rotation-z').value = selectedObject.rotation.z * (180 / Math.PI);
+                
+                // Update displayed values
+                document.getElementById('pos-x-value').textContent = selectedObject.position.x.toFixed(1);
+                document.getElementById('pos-y-value').textContent = selectedObject.position.y.toFixed(1);
+                document.getElementById('pos-z-value').textContent = selectedObject.position.z.toFixed(1);
+                document.getElementById('scale-value').textContent = selectedObject.userData.scale.toFixed(1);
+                document.getElementById('rotation-x-value').textContent = Math.round(selectedObject.rotation.x * (180 / Math.PI)) + '°';
+                document.getElementById('rotation-y-value').textContent = Math.round(selectedObject.rotation.y * (180 / Math.PI)) + '°';
+                document.getElementById('rotation-z-value').textContent = Math.round(selectedObject.rotation.z * (180 / Math.PI)) + '°';
+            } else {
+                // Reset sliders to default values
+                document.getElementById('pos-x').value = 0;
+                document.getElementById('pos-y').value = 1;
+                document.getElementById('pos-z').value = 0;
+                document.getElementById('scale').value = 1;
+                document.getElementById('rotation-x').value = 0;
+                document.getElementById('rotation-y').value = 0;
+                document.getElementById('rotation-z').value = 0;
+                
+                // Reset displayed values
+                document.getElementById('pos-x-value').textContent = '0.0';
+                document.getElementById('pos-y-value').textContent = '1.0';
+                document.getElementById('pos-z-value').textContent = '0.0';
+                document.getElementById('scale-value').textContent = '1.0';
+                document.getElementById('rotation-x-value').textContent = '0°';
+                document.getElementById('rotation-y-value').textContent = '0°';
+                document.getElementById('rotation-z-value').textContent = '0°';
+            }
+        }
+
+        // Update object transform based on control values
+        function updateTransform() {
+            if (!selectedObject) return;
+            
+            const posX = parseFloat(document.getElementById('pos-x').value);
+            const posY = parseFloat(document.getElementById('pos-y').value);
+            const posZ = parseFloat(document.getElementById('pos-z').value);
+            const scale = parseFloat(document.getElementById('scale').value);
+            const rotationX = parseFloat(document.getElementById('rotation-x').value) * (Math.PI / 180);
+            const rotationY = parseFloat(document.getElementById('rotation-y').value) * (Math.PI / 180);
+            const rotationZ = parseFloat(document.getElementById('rotation-z').value) * (Math.PI / 180);
+            
+            selectedObject.position.set(posX, posY, posZ);
+            selectedObject.scale.set(scale, scale, scale);
+            selectedObject.rotation.set(rotationX, rotationY, rotationZ);
+            
+            // Update volume based on scale
+            const originalVolume = shapeDefinitions[selectedObject.userData.type].volume;
+            selectedObject.userData.volume = originalVolume * scale;
+            selectedObject.userData.scale = scale;
+            selectedObject.userData.rotation = { x: rotationX, y: rotationY, z: rotationZ };
+            
+            // Update displayed values
+            document.getElementById('pos-x-value').textContent = posX.toFixed(1);
+            document.getElementById('pos-y-value').textContent = posY.toFixed(1);
+            document.getElementById('pos-z-value').textContent = posZ.toFixed(1);
+            document.getElementById('scale-value').textContent = scale.toFixed(1);
+            document.getElementById('rotation-x-value').textContent = Math.round(rotationX * (180 / Math.PI)) + '°';
+            document.getElementById('rotation-y-value').textContent = Math.round(rotationY * (180 / Math.PI)) + '°';
+            document.getElementById('rotation-z-value').textContent = Math.round(rotationZ * (180 / Math.PI)) + '°';
+            
+            // Update habitat data
+            updateHabitatDataForObject(selectedObject);
+            
+            updateVolumeDisplay();
+            validateDesign();
+            render2DView();
+        }
+
+        // Clear selection
+        function clearSelection() {
+            if (selectedObject) {
+                selectedObject.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material.emissive.setHex(0x000000);
+                    }
+                });
+            }
+            selectedObject = null;
+            updateTransformControls();
+        }
+
+        // Start habitat simulation
+        function startSimulation() {
+            isSimulationMode = true;
+            
+            // Show simulation overlay
+            const overlay = document.getElementById('simulation-overlay');
+            overlay.style.display = 'flex';
+            
+            // Enable free camera movement
+            camera.position.set(20, 15, 20);
+            camera.lookAt(0, 0, 0);
+            
+            // Animate simulation stats
+            animateSimulationStats();
+            
+            // Run simulation analysis
+            setTimeout(() => {
+                displaySimulationResults();
+            }, 3000);
+            
+            // Show instructions
+            alert("Simulation Mode Activated!\n\nYou can now:\n• Drag to rotate camera around habitat\n• Scroll to zoom in/out\n• Explore your design from all angles");
+        }
+
+        // Stop simulation
+        function stopSimulation() {
+            isSimulationMode = false;
+            const overlay = document.getElementById('simulation-overlay');
+            overlay.style.display = 'none';
+            
+            // Reset camera to default position
+            resetView();
+        }
+
+        // Animate simulation statistics
+        function animateSimulationStats() {
+            const stats = ['sim-oxygen', 'sim-power', 'sim-water', 'sim-waste'];
+            const targetValues = [98, 87, 92, 76];
+            
+            stats.forEach((statId, index) => {
+                let current = 0;
+                const element = document.getElementById(statId);
+                const target = targetValues[index];
+                const increment = target / 50; // Animate over 50 steps
+                
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= target) {
+                        current = target;
+                        clearInterval(timer);
+                    }
+                    element.textContent = `${Math.round(current)}%`;
+                }, 50);
+            });
+        }
+
+        // Display simulation results
+        function displaySimulationResults() {
+            const resultsDiv = document.getElementById('simulation-results');
+            const isValid = validateDesign();
+            
+            if (isValid) {
+                resultsDiv.innerHTML = `
+                    <div style="background: rgba(0, 255, 136, 0.1); padding: 1rem; border-radius: 4px; margin: 1rem 0; border: 1px solid rgba(0, 255, 136, 0.3);">
+                        <h3 style="color: #00ff88; margin-bottom: 0.5rem;">✓ Simulation Successful</h3>
+                        <p>Your habitat design meets NASA compliance standards and is ready for mission deployment.</p>
+                    </div>
+                `;
+            } else {
+                resultsDiv.innerHTML = `
+                    <div style="background: rgba(255, 94, 125, 0.1); padding: 1rem; border-radius: 4px; margin: 1rem 0; border: 1px solid rgba(255, 94, 125, 0.3);">
+                        <h3 style="color: #ff5e7d; margin-bottom: 0.5rem;">⚠ Simulation Issues Detected</h3>
+                        <p>Your habitat design has compliance issues that need to be addressed before mission deployment.</p>
+                        <p>Check the validation panel for details.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Export design as JSON
+        function exportDesign() {
+            const designData = {
+                habitat: habitatData,
+                shapes: objects.map(obj => ({
+                    type: obj.userData.type,
+                    name: obj.userData.name,
+                    category: obj.userData.category,
+                    position: { x: obj.position.x, y: obj.position.y, z: obj.position.z },
+                    rotation: { x: obj.rotation.x, y: obj.rotation.y, z: obj.rotation.z },
+                    scale: { x: obj.scale.x, y: obj.scale.y, z: obj.scale.z },
+                    volume: obj.userData.volume
+                }))
+            };
+            
+            const dataStr = JSON.stringify(designData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = 'deepseek-habitat-design.json';
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+
+        // Reset camera view
+        function resetView() {
+            camera.position.set(15, 10, 15);
+            camera.lookAt(0, 0, 0);
+            scene.rotation.set(0, 0, 0);
+        }
+
+        // Toggle grid visibility
+        function toggleGrid() {
+            gridHelper.visible = !gridHelper.visible;
+        }
+
+        // Toggle snap to grid
+        function toggleSnap() {
+            snapToGrid = !snapToGrid;
+            document.getElementById('snap-toggle-btn').textContent = `Snap: ${snapToGrid ? 'ON' : 'OFF'}`;
+        }
+
+        // Switch environment (Moon/Mars)
+        function switchEnvironment(env) {
+            currentEnvironment = env;
+            
+            // Update UI
+            document.getElementById('moon-env').classList.toggle('active', env === 'moon');
+            document.getElementById('mars-env').classList.toggle('active', env === 'mars');
+            
+            // Change scene background/terrain based on environment
+            if (env === 'moon') {
+                scene.background = new THREE.Color(0x000000);
+            } else if (env === 'mars') {
+                scene.background = new THREE.Color(0x220000);
+            }
+        }
+
+        // Clear all shapes
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all shapes?')) {
+                objects.forEach(obj => {
+                    scene.remove(obj);
+                });
+                objects = [];
+                habitatData.shapes = [];
+                
+                updateVolumeDisplay();
+                validateDesign();
+                render2DView();
+                clearSelection();
+            }
+        }
+
+        // Initialize the application when the page loads
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
